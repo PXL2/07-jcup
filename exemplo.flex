@@ -18,15 +18,22 @@ digito = [0-9]
 inteiro = {digito}+
 
 %%
+// Palavras-chave (insensível a maiúsculas/minúsculas)
+[sS][eE][lL][eE][cC][tT] { return new Symbol(sym.SELECT); }
+[fF][rR][oO][mM]         { return new Symbol(sym.FROM); }
+[wW][hH][eE][rR][eE]     { return new Symbol(sym.WHERE); }
 
 /* Regras e Ações Associadas: seção de instruções para o analisador léxico. */
-
 {inteiro} {
             Integer numero = Integer.valueOf(yytext());
             return new Symbol(sym.INTEIRO, yyline, yycolumn, numero);
           }
 "+"       { return new Symbol(sym.MAIS); }
 "-"       { return new Symbol(sym.MENOS); }
+"*"       { return new Symbol(sym.VEZES); }
+"/"       { return new Symbol(sym.DIVISAO); } 
+"%"       { return new Symbol(sym.RESTO); }
+"^"       { return new Symbol(sym.POTENCIA); }
 "("       { return new Symbol(sym.PARENTESQ); }
 ")"       { return new Symbol(sym.PARENTDIR); }
 ";"       { return new Symbol(sym.PTVIRG); }

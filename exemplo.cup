@@ -35,41 +35,123 @@ start with inicio;
 inicio ::= expr:e PTVIRG {: System.out.println(e); :}
          ;
 
-expr ::= expr:a MAIS expr:b
-         {: RESULT = a + b; :}
-
-       | expr:a MENOS expr:b
-         {: RESULT = a - b; :}
-
-       | expr:a VEZES expr:b
-         {: RESULT = a * b; :}
-
-       | expr:a DIVISAO expr:b
-         {:
-            RESULT = a / b;
-         :}
-       | expr:a RESTO expr:b
-         {:
-            RESULT = a % b;
-         :}
-       | expr:a POTENCIA expr:b
-         {: RESULT = (int) Math.pow(a, b); :}
-
-       | MENOS expr:a
-         {: RESULT = -a; :} %prec MENOSUNARIO
-
-       | PARENTESQ expr:a PARENTDIR
-         {: RESULT = a; :}
-
-       | INTEIRO:a
-         {: RESULT = a; :}
-        ;
+expressao ::= expressao:a MAIS expressao:b     {: RESULT = a + b; :}
+            | expressao:a MENOS expressao:b    {: RESULT = a - b; :}
+            | expressao:a VEZES expressao:b    {: RESULT = a * b; :}
+            | expressao:a DIVISAO expressao:b  {: RESULT = a / b; :}
+            | expressao:a RESTO expressao:b    {: RESULT = a % b; :}
+            | expressao:a POTENCIA expressao:b {: RESULT = (int) Math.pow(a, b); :}
+            | MENOS expressao:e                {: RESULT = -e; :} %prec MENOSUNARIO
+            | PARENTESQ expressao:e PARENTDIR  {: RESULT = e; :}
+            | INTEIRO:n                        {: RESULT = n; :}
+            ;
 
 /*
 Usar %prec:
   É importante quando um mesmo token tem dois significados 
   diferentes (como o - unário e binário).
-  Evita conflitos de precedência.
+  Evita conflitos de precedência.// --- Combined.cup ---
+import java_cup.runtime.*;
+import java.io.*;
+
+parser code {:
+    public static void main(String args[]) throws Exception {
+        if (args.length < 1) {
+            System.err.println("Uso: java CombinedParser <ficheiro_de_entrada>");
+            return;
+        }
+        try {
+            FileReader file = new FileReader(args[0]);
+            CombinedParser p = new CombinedParser(new CombinedScanner(file));
+            p.parse();
+        } catch (Exception e) {
+            System.err.println("Erro fatal durante a análise.");
+            e.printStackTrace();
+        }
+    }
+:};
+
+/* --- Seção de Terminais Combinados --- */
+// Calculadora
+terminal Integer CALC_INTEGRO;
+terminal MAIS, MENOS, VEZES, DIVISAO, RESTO, POTENCIA, MENOSUNARIO;
+terminal PTVIRG;
+// JSON
+terminal LBRACE, RBRACE, LBRACK, RBRACK, COLON;
+terminal String JSON_STRING;
+terminal Double JSON_NUMBER;
+terminal TRUE, FALSE, NULL;
+// SQL
+terminal SELECT, FROM, WHERE;
+terminal String SQL_ID, SQL_STRING_LITERAL;
+terminal Integer SQL_NUMBER_LITERAL;
+terminal OP_EQ, OP_NEQ, OP_GT, OP_LT, OP_GTE, OP_LTE;
+// Comuns
+terminal PARENTESQ, PARENTDIR, COMMA;
+
+
+/* --- Seção de Não-Terminais (Prefixados para evitar conflitos) --- */
+// Geral
+non terminal document;
+// Calculadora
+non terminal calc_programa;
+non terminal Integer calc_expressao;
+// JSON
+non terminal json_documento, json_valor, json_objeto, json_membros, json_par, json_array, json_elementos;
+// SQL
+non terminal sql_query, sql_lista_colunas, sql_clausula_from, sql_clausula_where, sql_condicao, sql_operador, sql_valor_literal, sql_lista_id;
+
+/* --- Precedência (Aplica-se apenas à gramática da calculadora) --- */
+precedence left MAIS, MENOS;
+precedence left VEZES, DIVISAO, RESTO;
+precedence right POTENCIA;
+precedence right MENOSUNARIO;
+
+/* --- Gramática Principal --- */
+start with document;
+
+document ::= calc_programa
+           | json_documento
+           | sql_query
+           ;
+
+/* --- Gramática da Calculadora --- */
+calc_programa ::= calc_expressao:e PTVIRG {: System.out.println("Expressão matemática válida calculada: " + e); :};
+
+calc_expressao ::= calc_expressao:a MAIS calc_expressao:b   {: RESULT = a + b; :}
+                 | calc_expressao:a MENOS calc_expressao:b  {: RESULT = a - b; :}
+                 | calc_expressao:a VEZES calc_expressao:b  {: RESULT = a * b; :}
+                 | calc_expressao:a DIVISAO calc_expressao:b{: RESULT = a / b; :}
+                 | calc_expressao:a RESTO calc_expressao:b  {: RESULT = a % b; :}
+                 | calc_expressao:a POTENCIA calc_expressao:b {: RESULT = (int) Math.pow(a, b); :}
+                 | MENOS calc_expressao:e                   {: RESULT = -e; :} %prec MENOSUNARIO
+                 | PARENTESQ calc_expressao:e PARENTDIR      {: RESULT = e; :}
+                 | CALC_INTEGRO:n                           {: RESULT = n; :}
+                 ;
+
+/* --- Gramática JSON --- */
+json_documento ::= json_objeto {: System.out.println("Documento JSON com objeto raiz válido."); :}
+                 | json_array  {: System.out.println("Documento JSON com array raiz válido."); :}
+                 ;
+json_valor ::= json_objeto | json_array | JSON_STRING | JSON_NUMBER | TRUE | FALSE | NULL;
+json_objeto ::= LBRACE RBRACE | LBRACE json_membros RBRACE;
+json_membros ::= json_par | json_membros COMMA json_par;
+json_par ::= JSON_STRING COLON json_valor;
+json_array ::= LBRACK RBRACK | LBRACK json_elementos RBRACK;
+json_elementos ::= json_valor | json_elementos COMMA json_valor;
+
+/* --- Gramática SQL --- */
+sql_query ::= SELECT sql_lista_colunas sql_clausula_from sql_clausula_where PTVIRG
+              {: System.out.println("Consulta SQL válida encontrada!"); :}
+              ;
+sql_lista_colunas ::= "*" | sql_lista_id;
+sql_lista_id ::= SQL_ID | sql_lista_id COMMA SQL_ID;
+sql_clausula_from ::= FROM SQL_ID;
+sql_clausula_where ::= WHERE sql_condicao | /* Vazio */ ;
+sql_condicao ::= SQL_ID sql_operador sql_valor_literal;
+sql_operador ::= OP_EQ | OP_NEQ | OP_GT | OP_LT | OP_GTE | OP_LTE;
+sql_valor_literal ::= SQL_STRING_LITERAL | SQL_NUMBER_LITERAL;
+
   Garante a construção correta da árvore sintática e a avaliação da expressão.
 
 => Usar %prec MENOSUNARIO para informar:

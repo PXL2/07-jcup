@@ -23,7 +23,7 @@ non terminal inicio;
 non terminal Integer expr;
 
 precedence left MAIS, MENOS;
-precedence right MENOSUNARIO; // Menos unário com maior precedência, associatividade à direita.
+precedence right MENOSUNARIO; 
 
 start with inicio;
 

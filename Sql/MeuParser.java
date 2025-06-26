@@ -141,7 +141,7 @@ public class MeuParser extends java_cup.runtime.lr_parser {
     }
   }
 
-  // Métodos para reportar erros (útil para depuração)
+  // Report de erros
   public void syntax_error(Symbol cur_token) {
     System.err.println("Erro de sintaxe na linha " + (cur_token.left + 1) + ", coluna " + (cur_token.right + 1) + ". Token inesperado: '" + cur_token.value + "'");
   }
